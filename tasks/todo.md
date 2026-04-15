@@ -1,4 +1,4 @@
-# MockML Interview Agent — MVP Tasks
+# MockML Interview Agent — Tasks
 
 ## Status Legend
 - [ ] Not started
@@ -7,39 +7,37 @@
 
 ---
 
-## MVP (End-to-End, ~10 Tasks)
+## V1 — MVP (SHIPPED ✅)
 
-- [ ] **T-01** **Project setup** — folder structure, `requirements.txt`, `.env`, `.gitignore`, `backend/config.py`
+- [x] **T-01** Project setup — folders, requirements.txt, .env, .gitignore, config.py
+- [x] **T-02** Supabase schema — 4 tables + RLS policies
+- [x] **T-03** PDF parser + resume store — OpenAI Responses API + Supabase write
+- [x] **T-04** ML Questions bank — 78 questions downloaded + OpenAI embeddings retriever
+- [x] **T-05** Interview orchestrator — phase state machine (1→5) + Supabase persistence
+- [x] **T-06** All 5 phase handlers — intro, Russian doll x2, factual Q&A, behavioural
+- [x] **T-07** Evaluation engine + report generator — LLM-as-judge scoring + final report
+- [x] **T-08** Voice layer — Whisper STT + OpenAI TTS (onyx), ElevenLabs fallback
+- [x] **T-09** FastAPI backend — /session/start, /session/{id}/respond, /session/{id}/report
+- [x] **T-10** React frontend — PDF upload, chat UI, mic recorder, TTS playback, report view
 
-- [ ] **T-02** **Supabase schema** — create 4 tables in `MockMLInterviewAgent`: `resume_sections`, `interview_sessions`, `conversation_turns`, `evaluations`
-
-- [ ] **T-03** **PDF parser** — `backend/pdf_parser.py`: send PDF bytes to OpenAI Responses API with structured extraction prompt; parse name, summary, education, experience, projects, skills into sections; write to Supabase via `resume_store.py`
-
-- [ ] **T-04** **ML Questions bank** — download `andrewekhalel/MLQuestions` content into `backend/ml_questions/questions.md`; implement `retriever.py` with cosine similarity to fetch top-5 questions matched to candidate expertise; LLM fallback if no match
-
-- [ ] **T-05** **Interview orchestrator** — `backend/interview_orchestrator.py`: state machine for phases 1→5; persists phase state in Supabase; calls phase handlers in sequence
-
-- [ ] **T-06** **Phase handlers** — implement all 5 phase handlers in one pass:
-  - Phase 1: intro opener from résumé
-  - Phase 2 & 3: Russian Doll drill-down with `drill_depth` state, tone enforcement, no praise words
-  - Phase 4: factual Q&A from retrieved questions
-  - Phase 5: behavioural wrap-up, detect if candidate asks questions
-
-- [ ] **T-07** **Evaluation engine** — `backend/evaluator.py`: score Phases 2 & 3 (Russian Doll depth matrix 0–10), Phase 4 (correctness), Phase 5 (communication/vision/team/curiosity); write to Supabase `evaluations`
-
-- [ ] **T-08** **Voice layer** — `backend/voice.py`: Whisper STT (`transcribe(audio_bytes)`) + ElevenLabs TTS (`speak(text)`) with voice ID `UgBBYS2sOqTuMpoF3BR0`
-
-- [ ] **T-09** **FastAPI backend** — `backend/main.py`: three endpoints:
-  - `POST /session/start` — upload PDF, parse, store, return `session_id`
-  - `POST /session/{id}/respond` — receive audio/text, run phase logic, return next message + TTS audio
-  - `GET /session/{id}/report` — return final performance report
-
-- [ ] **T-10** **React frontend** — `frontend/` (Vite + TypeScript): PDF upload, start button, chat transcript (interviewer / candidate), mic recorder via MediaRecorder API → Whisper, TTS audio playback, phase progress bar, final report display
+### V1 Test Results (2026-04-15)
+- PDF parsing: ✅ Rajat Pal resume parsed correctly
+- Session creation + Supabase writes: ✅
+- Phase 1 → Phase 2 auto-transition: ✅
+- Russian Doll drill-down activated: ✅
+- Voice audio (OpenAI TTS onyx): ✅ `has_audio: True` on all turns
+- UI renders correctly: ✅ desktop, tablet, mobile
+- GitHub push (no secrets): ✅ https://github.com/sgschincholkar/MockMLInterviewAgent
 
 ---
 
-## Notes
-- Model: `gpt-5.4-mini-2026-03-17`
-- ElevenLabs Voice ID: `UgBBYS2sOqTuMpoF3BR0`
-- Supabase project: `MockMLInterviewAgent`
-- Secrets: `secrets.md` — never commit
+## V2 — Backlog
+
+- [ ] **V2-01** ElevenLabs voice — upgrade plan to unlock library voice `UgBBYS2sOqTuMpoF3BR0`
+- [ ] **V2-02** Report PDF export — generate downloadable PDF report at end of interview
+- [ ] **V2-03** Session history — list past interviews, resume or review old sessions
+- [ ] **V2-04** Candidate dashboard — track scores over multiple sessions, trend charts
+- [ ] **V2-05** Multi-role support — extend beyond ML Engineer (Data Scientist, MLE, Research Scientist)
+- [ ] **V2-06** Hint system — optional hint button for candidates who are completely stuck
+- [ ] **V2-07** Admin view — interviewer-side view of full transcript + evaluation breakdown
+- [ ] **V2-08** Deploy to production — Render/Railway (backend) + Vercel (frontend)
