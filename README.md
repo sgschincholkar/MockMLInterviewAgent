@@ -1,5 +1,7 @@
 # MockML Interview Agent
 
+![Status](https://img.shields.io/badge/V1-Shipped-brightgreen) ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20React-blue) ![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-orange) ![Voice](https://img.shields.io/badge/Voice-OpenAI%20TTS-purple)
+
 An industrial-grade, fully AI-powered mock interview system for Machine Learning Engineer candidates. Upload your résumé, go through a structured 5-phase technical interview conducted by an AI interviewer, and receive a detailed performance report with scores and hiring recommendation.
 
 ---
@@ -124,8 +126,8 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 │  └─────────────────────────────────────────────────────┘  │
 │                                                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  │
-│  │  OpenAI LLM │  │ Whisper STT  │  │  ElevenLabs    │  │
-│  │ gpt-5.4-mini│  │  (OpenAI)    │  │  TTS Voice     │  │
+│  │  OpenAI LLM │  │ Whisper STT  │  │  OpenAI TTS    │  │
+│  │ gpt-5.4-mini│  │  (OpenAI)    │  │  (onyx voice)  │  │
 │  └─────────────┘  └──────────────┘  └────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -152,7 +154,7 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 - The orchestrator maintains a phase state machine (1 → 5) persisted in Supabase
 - Each candidate response is transcribed via Whisper (if audio) and routed to the active phase handler
 - The phase handler calls the LLM with a tailored system prompt and conversation history
-- The LLM's response is returned as text and spoken aloud via ElevenLabs TTS
+- The LLM's response is returned as text and spoken aloud via OpenAI TTS (`onyx` voice)
 
 ### 4. Russian Doll Engine
 - Tracks `drill_depth` as an integer across the conversation
@@ -183,7 +185,7 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 | LLM | OpenAI `gpt-5.4-mini-2026-03-17` |
 | PDF Parsing | OpenAI Responses API (vision/document) |
 | Speech-to-Text | OpenAI Whisper (`whisper-1`) |
-| Text-to-Speech | ElevenLabs (`eleven_turbo_v2_5`) |
+| Text-to-Speech | OpenAI TTS (`tts-1`, `onyx` voice) — ElevenLabs as fallback |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Similarity Search | Cosine similarity (NumPy + scikit-learn) |
 | Database | Supabase (PostgreSQL) |
@@ -245,7 +247,7 @@ MockAgenticEngineering/
 │   ├── evaluator.py               # LLM-as-judge scoring
 │   ├── report_generator.py        # Final report builder
 │   ├── empathy_engine.py          # Anxiety detection
-│   ├── voice.py                   # Whisper STT + ElevenLabs TTS
+│   ├── voice.py                   # Whisper STT + OpenAI TTS (ElevenLabs fallback)
 │   ├── db/
 │   │   ├── client.py              # Supabase client singleton
 │   │   └── migration.sql          # Schema + RLS policies
@@ -384,9 +386,29 @@ Generate and fetch the final performance report.
 
 ## Voice Mode
 
-When ElevenLabs is available (paid plan), the interviewer speaks using voice ID `UgBBYS2sOqTuMpoF3BR0` via the `eleven_turbo_v2_5` model. Candidate speech is transcribed by OpenAI Whisper.
+The interviewer speaks using **OpenAI TTS** (`tts-1`, `onyx` voice) — a deep, professional tone that works on all OpenAI plans with no additional setup. Candidate speech is transcribed by **OpenAI Whisper** (`whisper-1`).
 
-When ElevenLabs is unavailable (free tier), the app automatically falls back to **text mode** — all interview functionality works identically, just without audio output. A "Text mode" badge appears in the UI header.
+**Fallback chain:**
+1. OpenAI TTS (`onyx`) — primary, always attempted first
+2. ElevenLabs (`UgBBYS2sOqTuMpoF3BR0`) — used if OpenAI TTS fails and a paid ElevenLabs plan is available
+3. Text mode — if both fail, the interview continues silently. A "Text mode" badge appears in the UI header and all functionality works identically without audio.
+
+> To enable the ElevenLabs voice, upgrade to a paid ElevenLabs plan and set `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` in `.env`.
+
+---
+
+## V2 Roadmap
+
+| Item | Description |
+|---|---|
+| ElevenLabs voice | Upgrade plan to unlock library voice `UgBBYS2sOqTuMpoF3BR0` |
+| PDF report export | Downloadable PDF performance report at end of interview |
+| Session history | List past interviews, review or resume old sessions |
+| Candidate dashboard | Track scores across multiple sessions with trend charts |
+| Multi-role support | Extend beyond ML Engineer — Data Scientist, Research Scientist, MLOps |
+| Hint system | Optional hint button for candidates who are completely stuck |
+| Admin view | Interviewer-side transcript and evaluation breakdown |
+| Production deploy | Render/Railway (backend) + Vercel (frontend) |
 
 ---
 
