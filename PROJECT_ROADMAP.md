@@ -1,5 +1,7 @@
 # MockML Interview Agent — Project Roadmap
 
+**Status: V1 Shipped — 2026-04-15** | [GitHub](https://github.com/sgschincholkar/MockMLInterviewAgent)
+
 ## Vision
 An industrial-grade, fully AI-powered mock interview agent for Machine Learning Engineer candidates. It ingests a résumé PDF, conducts a structured 5-phase interview via voice and text, evaluates the candidate, and produces a detailed performance report.
 
@@ -41,11 +43,11 @@ An industrial-grade, fully AI-powered mock interview agent for Machine Learning 
 
 | Component | Technology |
 |---|---|
-| Frontend | React (Vite + TypeScript) |
+| Frontend | React 18 (Vite + TypeScript) |
 | Backend | FastAPI (Python) |
 | LLM | OpenAI (`gpt-5.4-mini-2026-03-17`) |
-| Speech-to-Text | OpenAI Whisper |
-| Text-to-Speech | ElevenLabs (Voice ID: `UgBBYS2sOqTuMpoF3BR0`) |
+| Speech-to-Text | OpenAI Whisper (`whisper-1`) |
+| Text-to-Speech | OpenAI TTS (`tts-1`, `onyx`) primary — ElevenLabs (`UgBBYS2sOqTuMpoF3BR0`) fallback |
 | PDF Parsing | OpenAI Responses API (vision/document) |
 | Database | Supabase (project: MockMLInterviewAgent) |
 | ML Questions Bank | andrewekhalel/MLQuestions (GitHub) |
