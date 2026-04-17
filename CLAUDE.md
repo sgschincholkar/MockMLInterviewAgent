@@ -55,7 +55,8 @@ backend/
   evaluator.py     LLM-as-judge scoring per phase
   report_generator.py  Final report with scores + narrative + recommendation
   empathy_engine.py    Anxiety signal detection
-  voice.py         Whisper STT + OpenAI TTS primary + ElevenLabs fallback
+  voice.py         Whisper STT + ElevenLabs TTS primary + OpenAI TTS fallback
+  token_tracker.py Per-call token/cost tracking → Supabase token_usage table
   db/
     client.py      Supabase singleton client
     migration.sql  Schema + RLS allow_all policies (run in Supabase SQL editor)
@@ -69,7 +70,7 @@ backend/
 ## Supabase
 
 - Project: `MockMLInterviewAgent`
-- Tables: `interview_sessions`, `resume_sections`, `conversation_turns`, `evaluations`
+- Tables: `interview_sessions`, `resume_sections`, `conversation_turns`, `evaluations`, `token_usage`
 - **RLS**: All tables have `allow_all` policies. Without these, all writes fail with `42501`.
 - If adding a new table, always include `ENABLE ROW LEVEL SECURITY` + `CREATE POLICY "allow_all"` in the migration.
 
@@ -78,8 +79,8 @@ backend/
 ## Voice Layer
 
 TTS fallback chain (in order):
-1. **OpenAI TTS** (`tts-1`, `onyx` voice) — primary, works on all OpenAI plans
-2. **ElevenLabs** — fallback, requires paid plan for library voices
+1. **ElevenLabs** (`eleven_turbo_v2_5`, voice `UgBBYS2sOqTuMpoF3BR0`) — primary, requires paid plan
+2. **OpenAI TTS** (`tts-1`, `onyx` voice) — fallback
 3. **Empty bytes** — graceful text-mode degradation, frontend skips audio silently
 
 Frontend shows `🔊 Voice` badge when audio is present, `Text mode` when not.
@@ -115,16 +116,33 @@ All LLM calls use the **OpenAI Responses API** (`client.responses.create`):
 
 1. Use `python -m uvicorn` not `uvicorn` (Python env mismatch)
 2. Always add RLS `allow_all` policies in migration SQL (Supabase blocks writes by default)
-3. ElevenLabs free tier blocks library voices — use OpenAI TTS as primary
+3. ElevenLabs free tier blocks library voices — paid plan required; OpenAI TTS is the fallback
 4. Never use interactive CLI scaffolding (`create-vite`) in scripts — write files directly
 5. OpenAI Responses API returns `.output_text`, not `.choices[0].message.content`
+6. Whisper STT has no usage object — estimate cost from output transcript char count
+7. Never commit `.env`, `secrets.md`, or `.mcp.json` (contains DB password)
+
+---
+
+## Token Tracking
+
+`backend/token_tracker.py` writes one row per API call to the `token_usage` Supabase table.
+- `track_llm(session_id, operation, model, input_tokens, output_tokens)`
+- `track_embedding(session_id, model, input_tokens)`
+- `track_stt(session_id, char_count)` — char count of Whisper transcript (no native usage object)
+- `track_tts(session_id, char_count, provider)` — provider: `"elevenlabs"` or `"openai"`
+- `get_usage_summary(session_id)` — aggregates all rows, used by report endpoint
+
+Cost constants (approximate): LLM $0.15/1M input + $0.60/1M output; embeddings $0.02/1M;
+STT $0.006/650 chars; OpenAI TTS $15/1M chars; ElevenLabs $0.30/1K chars.
+
+Report endpoint returns `token_usage` key; ReportView renders "API Usage & Cost" table.
 
 ---
 
 ## V2 Backlog
 
 See `tasks/todo.md` for full list. Key items:
-- ElevenLabs paid voice
 - PDF report export
 - Session history + candidate dashboard
 - Production deploy (Render + Vercel)

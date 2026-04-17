@@ -16,7 +16,7 @@
 - [x] **T-05** Interview orchestrator — phase state machine (1→5) + Supabase persistence
 - [x] **T-06** All 5 phase handlers — intro, Russian doll x2, factual Q&A, behavioural
 - [x] **T-07** Evaluation engine + report generator — LLM-as-judge scoring + final report
-- [x] **T-08** Voice layer — Whisper STT + OpenAI TTS (onyx), ElevenLabs fallback
+- [x] **T-08** Voice layer — Whisper STT + ElevenLabs TTS primary (paid), OpenAI TTS fallback
 - [x] **T-09** FastAPI backend — /session/start, /session/{id}/respond, /session/{id}/report
 - [x] **T-10** React frontend — PDF upload, chat UI, mic recorder, TTS playback, report view
 
@@ -31,10 +31,26 @@
 
 ---
 
+## V1.1 — Token Tracking + ElevenLabs Primary TTS (SHIPPED ✅ 2026-04-17)
+
+- [x] **T-11** token_tracker.py — per-call tracking to Supabase token_usage table
+- [x] **T-12** voice.py — ElevenLabs promoted to primary TTS, session_id threading
+- [x] **T-13** Session ID threaded to all internal helpers (pdf_parser, phases, evaluator, report_generator, retriever, orchestrator)
+- [x] **T-14** Report endpoint exposes token_usage breakdown
+- [x] **T-15** ReportView: API Usage & Cost table rendered from report data
+- [x] **T-16** migration.sql: token_usage table with RLS allow_all policy
+
+### V1.1 Test Results (2026-04-17)
+- Full interview (Arjun Sharma): ✅ 63 token_usage rows written to Supabase
+- Operations tracked: llm_chat, embedding, stt, tts ✅
+- Report endpoint returns token_usage key ✅
+- GitHub push (no secrets): ✅ commit 0ca5f94
+
+---
+
 ## V2 — Backlog
 
-- [ ] **V2-01** ElevenLabs voice — upgrade plan to unlock library voice `UgBBYS2sOqTuMpoF3BR0`
-- [ ] **V2-02** Report PDF export — generate downloadable PDF report at end of interview
+- [ ] **V2-01** Report PDF export — generate downloadable PDF report at end of interview
 - [ ] **V2-03** Session history — list past interviews, resume or review old sessions
 - [ ] **V2-04** Candidate dashboard — track scores over multiple sessions, trend charts
 - [ ] **V2-05** Multi-role support — extend beyond ML Engineer (Data Scientist, MLE, Research Scientist)

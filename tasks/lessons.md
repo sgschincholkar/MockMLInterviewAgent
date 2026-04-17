@@ -18,8 +18,8 @@
 
 ## L-03 — ElevenLabs free tier blocks library voices via API
 **What happened:** ElevenLabs returned `402 Payment Required` — free users cannot use community/library voice IDs via the API.
-**Fix:** Switched primary TTS to OpenAI TTS (`tts-1`, `onyx` voice) which is covered by the existing OpenAI API key. ElevenLabs is kept as a fallback for when the plan is upgraded.
-**Rule:** When using ElevenLabs library/community voice IDs, a paid plan is required. Default to OpenAI TTS for free-tier compatibility.
+**Fix:** Initially switched to OpenAI TTS as primary. After user upgraded to paid ElevenLabs plan, swapped back: ElevenLabs is now primary, OpenAI TTS is fallback.
+**Rule:** When using ElevenLabs library/community voice IDs, a paid plan is required. Current TTS chain: ElevenLabs → OpenAI TTS → empty bytes.
 
 ---
 
@@ -34,3 +34,17 @@
 **What happened:** The Responses API (`client.responses.create`) returns `.output_text` directly, not the chat completions format of `.choices[0].message.content`.
 **Fix:** All LLM calls use `.output_text` consistently across `pdf_parser.py`, `phases.py`, `evaluator.py`, `report_generator.py`.
 **Rule:** When using `client.responses.create`, always access `.output_text`. When using `client.chat.completions.create`, use `.choices[0].message.content`. Never mix the two.
+
+---
+
+## L-06 — Whisper STT returns no usage object; estimate from transcript length
+**What happened:** Unlike LLM and embedding calls, `client.audio.transcriptions.create()` returns only the transcript string — no token count, no duration, no cost metadata.
+**Fix:** Estimate STT cost from output transcript char count using ~650 chars/min at 130 WPM × 5 chars/word.
+**Rule:** For STT tracking, use `track_stt(session_id, len(transcript))`. Never try to access `.usage` on a Whisper transcription response.
+
+---
+
+## L-07 — MCP server config belongs in `.mcp.json`, not `settings.json`
+**What happened:** Attempted to add `mcpServers` key to `~/.claude/settings.json` — schema validation rejected it.
+**Fix:** Create `.mcp.json` in the project root for project-scoped MCP servers. Use `~/.claude/.mcp.json` for global MCP servers.
+**Rule:** MCP server config never goes in `settings.json`. `.mcp.json` in project root = project-scoped. Add to `.gitignore` if it contains credentials.
