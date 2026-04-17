@@ -43,6 +43,7 @@ async def start_session(file: UploadFile = File(...)):
     pdf_bytes = await file.read()
 
     # Parse PDF via OpenAI (no third-party PDF libs)
+    # session_id doesn't exist yet, so pdf_parse tracking uses NULL session_id
     parsed = parse_pdf(pdf_bytes)
 
     # Create session and store resume
@@ -53,7 +54,7 @@ async def start_session(file: UploadFile = File(...)):
     result = process_turn(session_id, candidate_message=None)
 
     # Generate TTS for opener
-    audio_bytes = speak(result["message"])
+    audio_bytes = speak(result["message"], session_id=session_id)
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
     return {
@@ -80,7 +81,7 @@ async def respond(
     """
     if audio is not None:
         audio_bytes = await audio.read()
-        candidate_text = transcribe(audio_bytes, filename=audio.filename or "audio.webm")
+        candidate_text = transcribe(audio_bytes, filename=audio.filename or "audio.webm", session_id=session_id)
     elif text:
         candidate_text = text
     else:
@@ -89,7 +90,7 @@ async def respond(
     result = process_turn(session_id, candidate_message=candidate_text)
 
     # Generate TTS
-    audio_bytes = speak(result["message"])
+    audio_bytes = speak(result["message"], session_id=session_id)
     audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
 
     return {

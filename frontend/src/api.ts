@@ -17,6 +17,20 @@ export interface RespondResponse {
   done: boolean;
 }
 
+export interface TokenOperationSummary {
+  input_tokens: number;
+  output_tokens: number;
+  char_count: number;
+  cost_usd: number;
+  calls: number;
+}
+
+export interface TokenUsage {
+  total_cost_usd: number;
+  by_operation: Record<string, TokenOperationSummary>;
+  detail: Record<string, unknown>[];
+}
+
 export interface Report {
   candidate_name: string;
   date: string;
@@ -25,6 +39,7 @@ export interface Report {
   recommendation: string;
   narrative: string;
   phase_rationale: Record<string, string>;
+  token_usage?: TokenUsage;
 }
 
 export async function startSession(pdfFile: File): Promise<StartResponse> {

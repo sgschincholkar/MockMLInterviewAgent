@@ -7,6 +7,7 @@ import json
 from openai import OpenAI
 from backend.config import OPENAI_API_KEY, OPENAI_MODEL
 from backend.empathy_engine import should_encourage, empathy_prefix
+from backend.token_tracker import track_llm
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -22,11 +23,14 @@ PERSONA = (
 
 # ─── Helper ──────────────────────────────────────────────────────────────────
 
-def _chat(system: str, messages: list[dict]) -> str:
+def _chat(system: str, messages: list[dict], session_id: str | None = None) -> str:
     response = client.responses.create(
         model=OPENAI_MODEL,
         input=[{"role": "system", "content": system}] + messages,
     )
+    track_llm(session_id, "llm_chat", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     return response.output_text.strip()
 
 
@@ -94,7 +98,7 @@ def _get_drill_project(resume: dict, phase: int) -> dict:
     return {"name": "your most significant project", "description": ""}
 
 
-def phase_project_respond(resume: dict, history: list[dict], phase: int) -> dict:
+def phase_project_respond(resume: dict, history: list[dict], phase: int, session_id: str | None = None) -> dict:
     """Handle Russian Doll drill-down for phase 2 or 3."""
     project = _get_drill_project(resume, phase)
     project_ctx = _build_project_context(project)
@@ -126,7 +130,7 @@ def phase_project_respond(resume: dict, history: list[dict], phase: int) -> dict
         + f"\nCurrent drill depth: {drill_depth}"
     )
 
-    response_text = _chat(system, messages)
+    response_text = _chat(system, messages, session_id)
 
     if "[PHASE_COMPLETE]" in response_text:
         bridge = "Let us move on." if phase == 2 else "That concludes the project review."
@@ -148,7 +152,7 @@ FACTUAL_SYSTEM = (
 )
 
 
-def phase4_respond(resume: dict, history: list[dict], questions: list[dict]) -> dict:
+def phase4_respond(resume: dict, history: list[dict], questions: list[dict], session_id: str | None = None) -> dict:
     """Cycle through retrieved factual questions."""
     candidate_turns = [t for t in history if t["role"] == "candidate"]
     q_index = len(candidate_turns)
@@ -171,7 +175,7 @@ def phase4_respond(resume: dict, history: list[dict], questions: list[dict]) -> 
         + f"\nYou have asked {q_index} questions so far. Ask question {q_index + 1} now."
     )
 
-    response_text = _chat(system, messages)
+    response_text = _chat(system, messages, session_id)
 
     if "[PHASE_COMPLETE]" in response_text:
         return {"message": "That concludes the technical questions.", "advance_phase": True, "q_index": q_index}
@@ -198,7 +202,7 @@ BEHAVIOURAL_SYSTEM = (
 )
 
 
-def phase5_respond(resume: dict, history: list[dict]) -> dict:
+def phase5_respond(resume: dict, history: list[dict], session_id: str | None = None) -> dict:
     """Cycle through behavioural questions."""
     candidate_turns = [t for t in history if t["role"] == "candidate"]
     q_index = len(candidate_turns)
@@ -222,7 +226,7 @@ def phase5_respond(resume: dict, history: list[dict]) -> dict:
         + f"\nAsk question {q_index + 1} now."
     )
 
-    response_text = _chat(system, messages)
+    response_text = _chat(system, messages, session_id)
 
     if "[PHASE_COMPLETE]" in response_text:
         return {

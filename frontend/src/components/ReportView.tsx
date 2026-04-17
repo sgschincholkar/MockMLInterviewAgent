@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchReport } from "../api";
-import type { Report } from "../api";
+import type { Report, TokenUsage } from "../api";
 
 interface Props {
   sessionId: string;
@@ -75,7 +75,58 @@ export default function ReportView({ sessionId, candidateName }: Props) {
             </p>
           ))}
         </div>
+
+        {/* Token Usage */}
+        {report.token_usage && Object.keys(report.token_usage.by_operation).length > 0 && (
+          <TokenUsageSection usage={report.token_usage} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function TokenUsageSection({ usage }: { usage: TokenUsage }) {
+  const OP_LABELS: Record<string, string> = {
+    pdf_parse: "PDF Parse",
+    llm_chat: "LLM Chat",
+    embedding: "Embeddings",
+    stt: "Speech-to-Text",
+    tts: "Text-to-Speech",
+  };
+
+  return (
+    <div style={styles.tokenSection}>
+      <div style={styles.tokenHeader}>
+        <h3 style={styles.sectionTitle}>API Usage & Cost</h3>
+        <span style={styles.totalCost}>
+          Est. total: ${usage.total_cost_usd.toFixed(4)}
+        </span>
+      </div>
+      <table style={styles.tokenTable}>
+        <thead>
+          <tr>
+            <th style={styles.th}>Operation</th>
+            <th style={styles.th}>Calls</th>
+            <th style={styles.th}>Tokens in</th>
+            <th style={styles.th}>Tokens out</th>
+            <th style={styles.th}>Chars</th>
+            <th style={styles.th}>Est. Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(usage.by_operation).map(([op, stats]) => (
+            <tr key={op}>
+              <td style={styles.td}>{OP_LABELS[op] ?? op}</td>
+              <td style={styles.tdNum}>{stats.calls}</td>
+              <td style={styles.tdNum}>{stats.input_tokens > 0 ? stats.input_tokens.toLocaleString() : "—"}</td>
+              <td style={styles.tdNum}>{stats.output_tokens > 0 ? stats.output_tokens.toLocaleString() : "—"}</td>
+              <td style={styles.tdNum}>{stats.char_count > 0 ? stats.char_count.toLocaleString() : "—"}</td>
+              <td style={styles.tdNum}>${stats.cost_usd.toFixed(4)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={styles.costNote}>* Cost estimates are approximate. Prices based on published API rates.</p>
     </div>
   );
 }
@@ -148,4 +199,18 @@ const styles: Record<string, React.CSSProperties> = {
   narrative: { display: "flex", flexDirection: "column", gap: "0.75rem" },
   sectionTitle: { fontSize: "1rem", fontWeight: 600, color: "var(--text-muted)" },
   naraPara: { fontSize: "0.92rem", lineHeight: 1.65, color: "var(--text)" },
+  tokenSection: { display: "flex", flexDirection: "column", gap: "0.75rem" },
+  tokenHeader: { display: "flex", justifyContent: "space-between", alignItems: "center" },
+  totalCost: { fontSize: "0.95rem", fontWeight: 600, color: "var(--accent)" },
+  tokenTable: { width: "100%", borderCollapse: "collapse" as const, fontSize: "0.82rem" },
+  th: {
+    textAlign: "left" as const,
+    padding: "0.45rem 0.6rem",
+    borderBottom: "1px solid var(--border)",
+    color: "var(--text-muted)",
+    fontWeight: 600,
+  },
+  td: { padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--border)", color: "var(--text)" },
+  tdNum: { padding: "0.4rem 0.6rem", borderBottom: "1px solid var(--border)", color: "var(--text)", textAlign: "right" as const },
+  costNote: { fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem" },
 };

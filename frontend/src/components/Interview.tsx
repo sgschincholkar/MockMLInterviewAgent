@@ -112,11 +112,9 @@ export default function Interview({ sessionId, candidateName, firstMessage, onDo
           <span style={styles.headerName}> — {candidateName}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          {!firstMessage.audio && (
-            <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", background: "var(--surface2)", padding: "0.2rem 0.6rem", borderRadius: "20px", border: "1px solid var(--border)" }}>
-              Text mode
-            </span>
-          )}
+          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", background: "var(--surface2)", padding: "0.2rem 0.6rem", borderRadius: "20px", border: "1px solid var(--border)" }}>
+            {firstMessage.audio ? "🔊 Voice" : "Text mode"}
+          </span>
           <PhaseBar phase={phase} />
         </div>
       </div>

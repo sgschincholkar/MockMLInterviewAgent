@@ -5,15 +5,19 @@ import json
 from openai import OpenAI
 from backend.config import OPENAI_API_KEY, OPENAI_MODEL
 from backend.db.client import get_client
+from backend.token_tracker import track_llm
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 
-def _chat(prompt: str) -> str:
+def _chat(prompt: str, session_id: str | None = None) -> str:
     response = client.responses.create(
         model=OPENAI_MODEL,
         input=[{"role": "user", "content": prompt}],
     )
+    track_llm(session_id, "llm_chat", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     return response.output_text.strip()
 
 
@@ -55,7 +59,7 @@ def evaluate_phase_project(session_id: str, phase: int, turns: list[dict]) -> di
     prompt = (
         f"{DEPTH_RUBRIC}\n\nInterview transcript (Phase {phase}):\n{conversation}"
     )
-    raw = _chat(prompt)
+    raw = _chat(prompt, session_id)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -88,7 +92,7 @@ def evaluate_phase4(session_id: str, turns: list[dict], questions: list[dict]) -
         pairs.append(f"Q{i+1}: {q['question']}\nExpected: {q.get('answer','')}\nCandidate: {answer}")
 
     prompt = CORRECTNESS_RUBRIC + "\n\n" + "\n\n".join(pairs)
-    raw = _chat(prompt)
+    raw = _chat(prompt, session_id)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):
@@ -133,7 +137,7 @@ def evaluate_phase5(session_id: str, turns: list[dict], candidate_asked_question
         else "The candidate did NOT ask any questions at the end — apply the -3 curiosity penalty."
     )
     prompt = f"{BEHAVIOURAL_RUBRIC}\n\n{asked_note}\n\nTranscript:\n{conversation}"
-    raw = _chat(prompt)
+    raw = _chat(prompt, session_id)
     if raw.startswith("```"):
         raw = raw.split("```")[1]
         if raw.startswith("json"):

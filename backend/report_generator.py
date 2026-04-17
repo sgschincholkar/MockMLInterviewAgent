@@ -9,6 +9,7 @@ from backend.resume_store import get_resume, get_turns
 from backend.evaluator import load_scores, evaluate_phase_project, evaluate_phase4, evaluate_phase5
 from backend.db.client import get_client
 from backend.ml_questions.retriever import get_relevant_questions
+from backend.token_tracker import track_llm, get_usage_summary
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -110,6 +111,9 @@ def generate_report(session_id: str) -> dict:
         model=OPENAI_MODEL,
         input=[{"role": "user", "content": narrative_prompt}],
     )
+    track_llm(session_id, "llm_chat", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     narrative = response.output_text.strip()
 
     return {
@@ -131,4 +135,5 @@ def generate_report(session_id: str) -> dict:
             "phase4": p4.get("rationale", ""),
             "phase5": p5.get("rationale", ""),
         },
+        "token_usage": get_usage_summary(session_id),
     }

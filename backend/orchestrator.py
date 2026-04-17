@@ -80,23 +80,23 @@ def process_turn(session_id: str, candidate_message: str | None) -> dict:
 
     # ── Phase 2: Project Deep-Dive #1 ────────────────────────────────────────
     elif phase == 2:
-        result = phase_project_respond(resume, history, phase=2)
+        result = phase_project_respond(resume, history, phase=2, session_id=session_id)
 
     # ── Phase 3: Project Deep-Dive #2 ────────────────────────────────────────
     elif phase == 3:
-        result = phase_project_respond(resume, history, phase=3)
+        result = phase_project_respond(resume, history, phase=3, session_id=session_id)
 
     # ── Phase 4: Factual / Technical Q&A ─────────────────────────────────────
     elif phase == 4:
         questions = _load_questions(session_id)
         if questions is None:
-            questions = get_relevant_questions(resume, n=6)
+            questions = get_relevant_questions(resume, n=6, session_id=session_id)
             _cache_questions(session_id, questions)
-        result = phase4_respond(resume, history, questions)
+        result = phase4_respond(resume, history, questions, session_id=session_id)
 
     # ── Phase 5: Behavioural ─────────────────────────────────────────────────
     elif phase == 5:
-        result = phase5_respond(resume, history)
+        result = phase5_respond(resume, history, session_id=session_id)
 
     else:
         return {"message": "The interview is complete.", "phase": phase, "done": True}

@@ -56,3 +56,21 @@ CREATE POLICY "allow_all" ON interview_sessions FOR ALL USING (true) WITH CHECK 
 CREATE POLICY "allow_all" ON resume_sections FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON conversation_turns FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "allow_all" ON evaluations FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. Token Usage (API cost tracking)
+CREATE TABLE IF NOT EXISTS token_usage (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID REFERENCES interview_sessions(id) ON DELETE CASCADE,
+    operation TEXT NOT NULL,  -- pdf_parse | llm_chat | embedding | stt | tts
+    model TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    char_count INTEGER,
+    cost_usd NUMERIC(10,6),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_token_usage_session ON token_usage(session_id);
+
+ALTER TABLE token_usage ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow_all" ON token_usage FOR ALL USING (true) WITH CHECK (true);

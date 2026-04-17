@@ -7,6 +7,7 @@ import base64
 import json
 from openai import OpenAI
 from backend.config import OPENAI_API_KEY, OPENAI_MODEL
+from backend.token_tracker import track_llm
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -42,7 +43,7 @@ Important:
 """
 
 
-def parse_pdf(pdf_bytes: bytes) -> dict:
+def parse_pdf(pdf_bytes: bytes, session_id: str | None = None) -> dict:
     """Send raw PDF bytes to OpenAI and extract structured resume sections."""
     pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
@@ -66,6 +67,9 @@ def parse_pdf(pdf_bytes: bytes) -> dict:
         ],
     )
 
+    track_llm(session_id, "pdf_parse", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     raw = response.output_text.strip()
     # Strip markdown code fences if model wraps in ```json ... ```
     if raw.startswith("```"):

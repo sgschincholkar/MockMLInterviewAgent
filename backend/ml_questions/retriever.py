@@ -9,6 +9,7 @@ import json
 import numpy as np
 from openai import OpenAI
 from backend.config import OPENAI_API_KEY, OPENAI_MODEL
+from backend.token_tracker import track_llm, track_embedding
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -40,8 +41,9 @@ def _parse_questions(path: str = QUESTIONS_PATH) -> list[dict]:
     return questions
 
 
-def _embed(texts: list[str]) -> np.ndarray:
+def _embed(texts: list[str], session_id: str | None = None) -> np.ndarray:
     response = client.embeddings.create(model=EMBED_MODEL, input=texts)
+    track_embedding(session_id, EMBED_MODEL, getattr(response.usage, "prompt_tokens", 0))
     return np.array([item.embedding for item in response.data])
 
 
@@ -52,7 +54,7 @@ def _cosine_similarity(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return b_norm @ a_norm
 
 
-def detect_expertise(resume: dict) -> str:
+def detect_expertise(resume: dict, session_id: str | None = None) -> str:
     """Ask LLM to detect candidate's primary ML domain from resume."""
     skills = resume.get("skills", "")
     projects = json.dumps(resume.get("projects", []))
@@ -74,16 +76,19 @@ def detect_expertise(resume: dict) -> str:
             }
         ],
     )
+    track_llm(session_id, "llm_chat", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     return response.output_text.strip()
 
 
-def get_relevant_questions(resume: dict, n: int = 6) -> list[dict]:
+def get_relevant_questions(resume: dict, n: int = 6, session_id: str | None = None) -> list[dict]:
     """
     Return top-N relevant questions for the candidate.
     Falls back to LLM-generated questions if similarity is too low.
     """
     all_questions = _parse_questions()
-    expertise = detect_expertise(resume)
+    expertise = detect_expertise(resume, session_id)
 
     # Build query from expertise + key resume signals
     skills = resume.get("skills", "")
@@ -91,8 +96,8 @@ def get_relevant_questions(resume: dict, n: int = 6) -> list[dict]:
 
     # Embed query and all questions
     q_texts = [q["question"] for q in all_questions]
-    embeddings = _embed(q_texts)
-    query_emb = _embed([query])[0]
+    embeddings = _embed(q_texts, session_id)
+    query_emb = _embed([query], session_id)[0]
 
     scores = _cosine_similarity(query_emb, embeddings)
     top_indices = np.argsort(scores)[::-1][:n]
@@ -109,11 +114,11 @@ def get_relevant_questions(resume: dict, n: int = 6) -> list[dict]:
 
     # Fallback: supplement with LLM-generated questions
     num_to_generate = MIN_QUESTIONS - len(good_questions)
-    generated = _generate_questions(expertise, skills, num_to_generate)
+    generated = _generate_questions(expertise, skills, num_to_generate, session_id)
     return good_questions + generated
 
 
-def _generate_questions(expertise: str, skills: str, n: int) -> list[dict]:
+def _generate_questions(expertise: str, skills: str, n: int, session_id: str | None = None) -> list[dict]:
     """Generate n factual ML questions tailored to the candidate's expertise."""
     response = client.responses.create(
         model=OPENAI_MODEL,
@@ -131,6 +136,9 @@ def _generate_questions(expertise: str, skills: str, n: int) -> list[dict]:
             }
         ],
     )
+    track_llm(session_id, "llm_chat", OPENAI_MODEL,
+              getattr(response.usage, "input_tokens", 0),
+              getattr(response.usage, "output_tokens", 0))
     raw = response.output_text.strip()
     if raw.startswith("```"):
         raw = raw.split("```")[1]
