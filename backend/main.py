@@ -7,6 +7,7 @@ Endpoints:
   GET  /session/{id}/report   — Get final performance report
 """
 import base64
+import os
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -20,13 +21,19 @@ from backend.report_generator import generate_report
 
 app = FastAPI(title="MockML Interview Agent", version="1.0.0")
 
+_frontend_origin = os.getenv("FRONTEND_ORIGIN", "*")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[_frontend_origin] if _frontend_origin != "*" else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
 
 
 # ─── POST /session/start ──────────────────────────────────────────────────────
