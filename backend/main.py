@@ -117,9 +117,3 @@ async def get_report(session_id: str):
     report = generate_report(session_id)
     return report
 
-
-# ─── Health check ─────────────────────────────────────────────────────────────
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
