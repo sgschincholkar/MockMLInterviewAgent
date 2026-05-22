@@ -1,6 +1,8 @@
 # MockML Interview Agent
 
-![Status](https://img.shields.io/badge/V1-Shipped-brightgreen) ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20React-blue) ![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-orange) ![Voice](https://img.shields.io/badge/Voice-OpenAI%20TTS-purple)
+![Status](https://img.shields.io/badge/V1.1-Shipped-brightgreen) ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20React-blue) ![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-orange) ![Voice](https://img.shields.io/badge/Voice-ElevenLabs%20%2B%20OpenAI-purple)
+
+🚀 **Live Demo:** [https://frontend-hazel-six-60.vercel.app](https://frontend-hazel-six-60.vercel.app)
 
 An industrial-grade, fully AI-powered mock interview system for Machine Learning Engineer candidates. Upload your résumé, go through a structured 5-phase technical interview conducted by an AI interviewer, and receive a detailed performance report with scores and hiring recommendation.
 
@@ -122,12 +124,12 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 │  ┌──────▼────────────────▼───────────────────▼────────┐  │
 │  │                  Supabase (PostgreSQL)               │  │
 │  │  interview_sessions | resume_sections |              │  │
-│  │  conversation_turns | evaluations                   │  │
+│  │  conversation_turns | evaluations | token_usage      │  │
 │  └─────────────────────────────────────────────────────┘  │
 │                                                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  │
-│  │  OpenAI LLM │  │ Whisper STT  │  │  OpenAI TTS    │  │
-│  │ gpt-5.4-mini│  │  (OpenAI)    │  │  (onyx voice)  │  │
+│  │  OpenAI LLM │  │ Whisper STT  │  │ ElevenLabs TTS │  │
+│  │ gpt-5.4-mini│  │  (OpenAI)    │  │ (OpenAI fallbk)│  │
 │  └─────────────┘  └──────────────┘  └────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -154,7 +156,7 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 - The orchestrator maintains a phase state machine (1 → 5) persisted in Supabase
 - Each candidate response is transcribed via Whisper (if audio) and routed to the active phase handler
 - The phase handler calls the LLM with a tailored system prompt and conversation history
-- The LLM's response is returned as text and spoken aloud via OpenAI TTS (`onyx` voice)
+- The LLM's response is returned as text and spoken aloud via ElevenLabs TTS (OpenAI TTS fallback)
 
 ### 4. Russian Doll Engine
 - Tracks `drill_depth` as an integer across the conversation
@@ -185,7 +187,7 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 | LLM | OpenAI `gpt-5.4-mini-2026-03-17` |
 | PDF Parsing | OpenAI Responses API (vision/document) |
 | Speech-to-Text | OpenAI Whisper (`whisper-1`) |
-| Text-to-Speech | OpenAI TTS (`tts-1`, `onyx` voice) — ElevenLabs as fallback |
+| Text-to-Speech | ElevenLabs (`eleven_turbo_v2_5`) primary — OpenAI TTS (`tts-1`, `onyx`) fallback |
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Similarity Search | Cosine similarity (NumPy + scikit-learn) |
 | Database | Supabase (PostgreSQL) |
@@ -231,6 +233,19 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 | max_score | FLOAT | Maximum possible |
 | rationale | TEXT | LLM-generated explanation |
 
+### `token_usage`
+| Column | Type | Description |
+|---|---|---|
+| id | UUID | Primary key |
+| session_id | UUID | FK → interview_sessions |
+| operation | TEXT | `pdf_parse`, `llm_chat`, `embedding`, `stt`, `tts` |
+| model | TEXT | Model name (e.g. `gpt-5.4-mini`, `whisper-1`) |
+| input_tokens | INTEGER | Input tokens (LLM/embedding calls) |
+| output_tokens | INTEGER | Output tokens (LLM calls) |
+| char_count | INTEGER | Character count (STT/TTS calls) |
+| cost_usd | NUMERIC | Estimated cost in USD |
+| created_at | TIMESTAMPTZ | |
+
 ---
 
 ## Project Structure
@@ -247,7 +262,8 @@ MockAgenticEngineering/
 │   ├── evaluator.py               # LLM-as-judge scoring
 │   ├── report_generator.py        # Final report builder
 │   ├── empathy_engine.py          # Anxiety detection
-│   ├── voice.py                   # Whisper STT + OpenAI TTS (ElevenLabs fallback)
+│   ├── voice.py                   # Whisper STT + ElevenLabs TTS (OpenAI fallback)
+│   ├── token_tracker.py           # Per-call token/cost tracking → Supabase
 │   ├── db/
 │   │   ├── client.py              # Supabase client singleton
 │   │   └── migration.sql          # Schema + RLS policies
@@ -279,11 +295,11 @@ MockAgenticEngineering/
 ## Setup & Running
 
 ### Prerequisites
-- Python 3.13+ (with miniconda or venv)
+- Python 3.13+ (miniconda or venv recommended)
 - Node.js 18+
-- A Supabase project
-- OpenAI API key
-- ElevenLabs API key (optional — falls back to text mode)
+- A [Supabase](https://supabase.com) project (free tier is fine)
+- OpenAI API key (required)
+- ElevenLabs API key (optional — falls back to OpenAI TTS, then text-only mode)
 
 ### 1. Clone the repo
 ```bash
@@ -291,27 +307,49 @@ git clone https://github.com/sgschincholkar/MockMLInterviewAgent
 cd MockMLInterviewAgent
 ```
 
-### 2. Configure environment variables
-Create a `.env` file in the root:
+### 2. Install dependencies
+```bash
+# Python
+pip install -r requirements.txt
+
+# Node
+cd frontend && npm install && cd ..
+```
+
+### 3. Configure environment variables
+Create a `.env` file in the project root:
 ```
 OPENAI_API_KEY=sk-...
-ELEVENLABS_API_KEY=sk_...
-ELEVENLABS_VOICE_ID=UgBBYS2sOqTuMpoF3BR0
 OPENAI_MODEL=gpt-5.4-mini-2026-03-17
+ELEVENLABS_API_KEY=sk_...          # optional
+ELEVENLABS_VOICE_ID=<voice-id>     # optional, requires paid ElevenLabs plan
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 ```
 
-### 3. Set up Supabase
-Run the contents of `backend/db/migration.sql` in your Supabase SQL Editor. This creates all 4 tables and configures Row Level Security policies.
+### 4. Set up Supabase
+Run the contents of `backend/db/migration.sql` in your Supabase SQL Editor. This creates all 5 tables (`interview_sessions`, `resume_sections`, `conversation_turns`, `evaluations`, `token_usage`) and configures Row Level Security policies.
 
-### 4. Start the app
+> **Important:** The RLS `allow_all` policies in the migration are required. Without them, all Supabase writes will fail with a `42501` error.
+
+### 5. Start the app
 ```bash
 ./start.sh
 ```
 
+Or run each server manually:
+```bash
+# Backend (from project root)
+PYTHONPATH="$PWD" python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Frontend (separate terminal)
+cd frontend && npm run dev
+```
+
 - Backend: `http://localhost:8000`
 - Frontend: `http://localhost:3000`
+
+> **Note:** Always use `python -m uvicorn`, not bare `uvicorn`. The bare binary may resolve to a different Python installation without the required packages.
 
 ---
 
@@ -368,7 +406,16 @@ Generate and fetch the final performance report.
   "overall": "29.3/40",
   "recommendation": "Hire",
   "narrative": "...",
-  "phase_rationale": { ... }
+  "phase_rationale": { ... },
+  "token_usage": {
+    "total_cost_usd": 0.0412,
+    "by_operation": {
+      "llm_chat": { "calls": 38, "input_tokens": 142000, "output_tokens": 8200, "cost_usd": 0.0384 },
+      "stt": { "calls": 22, "char_count": 14300, "cost_usd": 0.0132 },
+      "tts": { "calls": 23, "char_count": 9800, "cost_usd": 0.0029 },
+      "embedding": { "calls": 2, "input_tokens": 980, "cost_usd": 0.0000 }
+    }
+  }
 }
 ```
 
@@ -386,14 +433,14 @@ Generate and fetch the final performance report.
 
 ## Voice Mode
 
-The interviewer speaks using **OpenAI TTS** (`tts-1`, `onyx` voice) — a deep, professional tone that works on all OpenAI plans with no additional setup. Candidate speech is transcribed by **OpenAI Whisper** (`whisper-1`).
+Candidate speech is transcribed by **OpenAI Whisper** (`whisper-1`). The interviewer responds using:
 
-**Fallback chain:**
-1. OpenAI TTS (`onyx`) — primary, always attempted first
-2. ElevenLabs (`UgBBYS2sOqTuMpoF3BR0`) — used if OpenAI TTS fails and a paid ElevenLabs plan is available
-3. Text mode — if both fail, the interview continues silently. A "Text mode" badge appears in the UI header and all functionality works identically without audio.
+**TTS fallback chain:**
+1. **ElevenLabs** — primary (requires paid plan + `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` in `.env`)
+2. **OpenAI TTS** (`tts-1`, `onyx`) — fallback if ElevenLabs is unavailable or fails
+3. **Text mode** — if both fail, the interview continues silently. A "Text mode" badge appears in the UI and all functionality works identically without audio.
 
-> To enable the ElevenLabs voice, upgrade to a paid ElevenLabs plan and set `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` in `.env`.
+The app works fine without any ElevenLabs setup — OpenAI TTS will be used automatically.
 
 ---
 
@@ -401,14 +448,13 @@ The interviewer speaks using **OpenAI TTS** (`tts-1`, `onyx` voice) — a deep, 
 
 | Item | Description |
 |---|---|
-| ElevenLabs voice | Upgrade plan to unlock library voice `UgBBYS2sOqTuMpoF3BR0` |
 | PDF report export | Downloadable PDF performance report at end of interview |
 | Session history | List past interviews, review or resume old sessions |
 | Candidate dashboard | Track scores across multiple sessions with trend charts |
 | Multi-role support | Extend beyond ML Engineer — Data Scientist, Research Scientist, MLOps |
 | Hint system | Optional hint button for candidates who are completely stuck |
 | Admin view | Interviewer-side transcript and evaluation breakdown |
-| Production deploy | Render/Railway (backend) + Vercel (frontend) |
+| ~~Production deploy~~ | ✅ Railway (backend) + Vercel (frontend) — live |
 
 ---
 
