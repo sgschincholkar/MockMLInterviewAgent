@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../supabaseClient";
+import { usePostHog } from "@posthog/react";
 
 interface Props {
   onClose: () => void;
@@ -10,6 +11,7 @@ export default function AuthModal({ onClose }: Props) {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const posthog = usePostHog();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -27,8 +29,10 @@ export default function AuthModal({ onClose }: Props) {
     setLoading(false);
     if (err) {
       setError(err.message);
+      posthog?.capture("magic_link_error", { error_message: err.message });
     } else {
       setSent(true);
+      posthog?.capture("magic_link_sent");
     }
   }
 

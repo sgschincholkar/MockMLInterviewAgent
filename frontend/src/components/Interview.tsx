@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { respondAudio, respondText, playAudio } from "../api";
+import { usePostHog } from "@posthog/react";
 
 interface Message {
   role: "interviewer" | "candidate";
@@ -31,6 +32,7 @@ export default function Interview({ sessionId, candidateName, firstMessage, onDo
   const [recording, setRecording] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const posthog = usePostHog();
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -49,12 +51,29 @@ export default function Interview({ sessionId, candidateName, firstMessage, onDo
   async function handleResponse(audioBlob?: Blob) {
     setLoading(true);
     setError("");
+    const input_mode = audioBlob ? "voice" : "text";
     try {
       const data = audioBlob
         ? await respondAudio(sessionId, audioBlob)
         : await respondText(sessionId, textInput.trim());
 
       const candidateText = audioBlob ? data.candidate_text : textInput.trim();
+      posthog?.capture("answer_submitted", {
+        session_id: sessionId,
+        input_mode,
+        phase: data.phase,
+        phase_label: PHASE_LABELS[data.phase],
+      });
+
+      if (data.phase !== phase) {
+        posthog?.capture("interview_phase_advanced", {
+          session_id: sessionId,
+          from_phase: phase,
+          to_phase: data.phase,
+          to_phase_label: PHASE_LABELS[data.phase],
+        });
+      }
+
       setMessages((prev) => [
         ...prev,
         { role: "candidate", text: candidateText },
@@ -65,6 +84,7 @@ export default function Interview({ sessionId, candidateName, firstMessage, onDo
       if (data.audio_b64) playAudio(data.audio_b64);
 
       if (data.done) {
+        posthog?.capture("interview_completed", { session_id: sessionId });
         setTimeout(onDone, 2000);
       }
     } catch (e: unknown) {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchReport } from "../api";
 import type { Report, TokenUsage } from "../api";
+import { usePostHog } from "@posthog/react";
 
 interface Props {
   sessionId: string;
@@ -12,10 +13,18 @@ export default function ReportView({ sessionId, candidateName, userBadge }: Prop
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const posthog = usePostHog();
 
   useEffect(() => {
     fetchReport(sessionId)
-      .then(setReport)
+      .then((r) => {
+        setReport(r);
+        posthog?.capture("report_viewed", {
+          session_id: sessionId,
+          recommendation: r.recommendation,
+          overall_score: r.overall,
+        });
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [sessionId]);

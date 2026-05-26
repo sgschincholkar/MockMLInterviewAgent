@@ -6,6 +6,7 @@ import Upload from "./components/Upload";
 import Interview from "./components/Interview";
 import ReportView from "./components/ReportView";
 import type { StartResponse } from "./api";
+import { usePostHog } from "@posthog/react";
 
 type Screen = "landing" | "upload" | "interview" | "report";
 
@@ -15,24 +16,30 @@ export default function App() {
   const [sessionId, setSessionId] = useState("");
   const [candidateName, setCandidateName] = useState("");
   const [firstMessage, setFirstMessage] = useState<{ text: string; audio: string } | null>(null);
+  const posthog = usePostHog();
 
   // On mount: check if user is already logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session?.user) {
-        setUser(data.session.user);
+        const u = data.session.user;
+        setUser(u);
         setScreen("upload");
+        posthog?.identify(u.id, { email: u.email });
       }
     });
 
     // Listen for login via magic link (user clicks email link → tab updates)
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        const u = session.user;
+        setUser(u);
         setScreen("upload");
+        posthog?.identify(u.id, { email: u.email });
       } else {
         setUser(null);
         setScreen("landing");
+        posthog?.reset();
       }
     });
 
@@ -51,6 +58,7 @@ export default function App() {
   }
 
   async function handleLogout() {
+    posthog?.capture("user_signed_out");
     await supabase.auth.signOut();
     setUser(null);
     setScreen("landing");

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import AuthModal from "./AuthModal";
+import { usePostHog } from "@posthog/react";
 
 interface Props {
   onAuth: () => void;
@@ -58,8 +59,10 @@ const MOCK_SCORES = [
 
 export default function LandingPage({ onAuth }: Props) {
   const [showAuth, setShowAuth] = useState(false);
+  const posthog = usePostHog();
 
-  function openAuth() {
+  function openAuth(source: string) {
+    posthog?.capture("sign_in_requested", { source });
     setShowAuth(true);
   }
 
@@ -194,7 +197,7 @@ export default function LandingPage({ onAuth }: Props) {
         <div style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
           <span style={{ color: "var(--accent)" }}>Mock</span>ML
         </div>
-        <button onClick={openAuth} style={{
+        <button onClick={() => openAuth("nav")} style={{
           background: "var(--accent)",
           color: "#fff",
           padding: "0.5rem 1.25rem",
@@ -223,7 +226,7 @@ export default function LandingPage({ onAuth }: Props) {
         </p>
         <button
           style={ctaBtn}
-          onClick={openAuth}
+          onClick={() => openAuth("hero_cta")}
           onMouseEnter={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
             (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 48px rgba(99,102,241,0.5)";
@@ -531,7 +534,7 @@ export default function LandingPage({ onAuth }: Props) {
         </p>
         <button
           style={{ ...ctaBtn, fontSize: "1.05rem", padding: "1rem 2.5rem" }}
-          onClick={openAuth}
+          onClick={() => openAuth("bottom_cta")}
           onMouseEnter={e => {
             (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)";
             (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 48px rgba(99,102,241,0.5)";

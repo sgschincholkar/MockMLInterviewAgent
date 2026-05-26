@@ -1,0 +1,14 @@
+.env
+secrets.md
+.mcp.json
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+node_modules/
+dist/
+.vite/
+*.egg-info/
+.venv/
+venv/
+*.log

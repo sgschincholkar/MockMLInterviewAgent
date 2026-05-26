@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { startSession } from "../api";
 import type { StartResponse } from "../api";
+import { usePostHog } from "@posthog/react";
 
 interface Props {
   onSessionStarted: (data: StartResponse) => void;
@@ -12,6 +13,12 @@ export default function Upload({ onSessionStarted, userBadge }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const posthog = usePostHog();
+
+  function selectFile(f: File) {
+    setFile(f);
+    posthog?.capture("resume_selected", { file_name: f.name, file_size_kb: Math.round(f.size / 1024) });
+  }
 
   async function handleStart() {
     if (!file) return;
@@ -19,9 +26,12 @@ export default function Upload({ onSessionStarted, userBadge }: Props) {
     setError("");
     try {
       const data = await startSession(file);
+      posthog?.capture("interview_started", { session_id: data.session_id, candidate_name: data.candidate_name });
       onSessionStarted(data);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to start session.");
+      const msg = e instanceof Error ? e.message : "Failed to start session.";
+      setError(msg);
+      posthog?.capture("interview_start_error", { error_message: msg });
     } finally {
       setLoading(false);
     }
@@ -47,14 +57,14 @@ export default function Upload({ onSessionStarted, userBadge }: Props) {
           onDrop={(e) => {
             e.preventDefault();
             const f = e.dataTransfer.files[0];
-            if (f?.type === "application/pdf") setFile(f);
+            if (f?.type === "application/pdf") selectFile(f);
           }}
         >
           <input
             ref={inputRef}
             type="file"
             accept=".pdf"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) selectFile(f); }}
           />
           <span style={styles.dropIcon}>📄</span>
           <p style={styles.dropText}>
