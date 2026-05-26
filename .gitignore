@@ -13,3 +13,5 @@ dist/
 venv/
 *.log
 .vercel
+.claude/worktrees/
+*.pdf
