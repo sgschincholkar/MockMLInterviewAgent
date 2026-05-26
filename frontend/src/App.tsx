@@ -1,16 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "./supabaseClient";
+import type { User } from "@supabase/supabase-js";
+import LandingPage from "./components/LandingPage";
 import Upload from "./components/Upload";
 import Interview from "./components/Interview";
 import ReportView from "./components/ReportView";
 import type { StartResponse } from "./api";
 
-type Screen = "upload" | "interview" | "report";
+type Screen = "landing" | "upload" | "interview" | "report";
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("upload");
+  const [screen, setScreen] = useState<Screen>("landing");
+  const [user, setUser] = useState<User | null>(null);
   const [sessionId, setSessionId] = useState("");
   const [candidateName, setCandidateName] = useState("");
   const [firstMessage, setFirstMessage] = useState<{ text: string; audio: string } | null>(null);
+
+  // On mount: check if user is already logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) {
+        setUser(data.session.user);
+        setScreen("upload");
+      }
+    });
+
+    // Listen for login via magic link (user clicks email link → tab updates)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        setScreen("upload");
+      } else {
+        setUser(null);
+        setScreen("landing");
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   function handleSessionStarted(data: StartResponse) {
     setSessionId(data.session_id);
@@ -23,10 +50,45 @@ export default function App() {
     setScreen("report");
   }
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setScreen("landing");
+  }
+
+  // Small user badge shown in Interview + Report headers
+  const userBadge = user ? (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "0.6rem",
+      fontSize: "0.8rem",
+      color: "var(--text-muted)",
+    }}>
+      <span>{user.email}</span>
+      <button
+        onClick={handleLogout}
+        style={{
+          background: "var(--surface2)",
+          border: "1px solid var(--border)",
+          color: "var(--text-muted)",
+          padding: "0.25rem 0.6rem",
+          borderRadius: 6,
+          fontSize: "0.75rem",
+        }}
+      >
+        Sign out
+      </button>
+    </div>
+  ) : null;
+
   return (
     <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      {screen === "landing" && (
+        <LandingPage onAuth={() => setScreen("upload")} />
+      )}
       {screen === "upload" && (
-        <Upload onSessionStarted={handleSessionStarted} />
+        <Upload onSessionStarted={handleSessionStarted} userBadge={userBadge} />
       )}
       {screen === "interview" && firstMessage && (
         <Interview
@@ -34,10 +96,11 @@ export default function App() {
           candidateName={candidateName}
           firstMessage={firstMessage}
           onDone={handleInterviewDone}
+          userBadge={userBadge}
         />
       )}
       {screen === "report" && (
-        <ReportView sessionId={sessionId} candidateName={candidateName} />
+        <ReportView sessionId={sessionId} candidateName={candidateName} userBadge={userBadge} />
       )}
     </div>
   );

@@ -5,9 +5,10 @@ import type { Report, TokenUsage } from "../api";
 interface Props {
   sessionId: string;
   candidateName: string;
+  userBadge?: React.ReactNode;
 }
 
-export default function ReportView({ sessionId, candidateName }: Props) {
+export default function ReportView({ sessionId, candidateName, userBadge }: Props) {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -33,11 +34,14 @@ export default function ReportView({ sessionId, candidateName }: Props) {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <div style={styles.banner}>
+        <div style={{ ...styles.banner, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "1rem" }}>
+          <div>
           <h1 style={styles.title}>Performance Report</h1>
           <p style={styles.meta}>
             {candidateName} &nbsp;·&nbsp; {report.date} &nbsp;·&nbsp; Machine Learning Engineer
           </p>
+          </div>
+          {userBadge}
         </div>
 
         {/* Scores grid */}

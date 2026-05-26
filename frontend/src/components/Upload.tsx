@@ -4,9 +4,10 @@ import type { StartResponse } from "../api";
 
 interface Props {
   onSessionStarted: (data: StartResponse) => void;
+  userBadge?: React.ReactNode;
 }
 
-export default function Upload({ onSessionStarted }: Props) {
+export default function Upload({ onSessionStarted, userBadge }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,11 @@ export default function Upload({ onSessionStarted }: Props) {
 
   return (
     <div style={styles.container}>
+      {userBadge && (
+        <div style={{ position: "fixed", top: "1rem", right: "1rem", zIndex: 10 }}>
+          {userBadge}
+        </div>
+      )}
       <div style={styles.card}>
         <h1 style={styles.title}>MockML Interview Agent</h1>
         <p style={styles.subtitle}>

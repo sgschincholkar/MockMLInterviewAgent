@@ -11,6 +11,7 @@ interface Props {
   candidateName: string;
   firstMessage: { text: string; audio: string };
   onDone: () => void;
+  userBadge?: React.ReactNode;
 }
 
 const PHASE_LABELS: Record<number, string> = {
@@ -21,7 +22,7 @@ const PHASE_LABELS: Record<number, string> = {
   5: "Behavioural",
 };
 
-export default function Interview({ sessionId, candidateName, firstMessage, onDone }: Props) {
+export default function Interview({ sessionId, candidateName, firstMessage, onDone, userBadge }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     { role: "interviewer", text: firstMessage.text },
   ]);
@@ -116,6 +117,7 @@ export default function Interview({ sessionId, candidateName, firstMessage, onDo
             {firstMessage.audio ? "🔊 Voice" : "Text mode"}
           </span>
           <PhaseBar phase={phase} />
+          {userBadge}
         </div>
       </div>
 
