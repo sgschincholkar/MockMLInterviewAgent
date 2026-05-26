@@ -195,7 +195,7 @@ export default function LandingPage({ onAuth }: Props) {
         zIndex: 50,
       }}>
         <div style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "-0.01em" }}>
-          <span style={{ color: "var(--accent)" }}>Mock</span>ML
+          <span style={{ color: "var(--accent)" }}>Mock</span>ML Interview Agent
         </div>
         <button onClick={() => openAuth("nav")} style={{
           background: "var(--accent)",
