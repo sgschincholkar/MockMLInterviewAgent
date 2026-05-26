@@ -1,8 +1,8 @@
 # MockML Interview Agent
 
-![Status](https://img.shields.io/badge/V1.1-Shipped-brightgreen) ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20React-blue) ![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-orange) ![Voice](https://img.shields.io/badge/Voice-ElevenLabs%20%2B%20OpenAI-purple)
+![Status](https://img.shields.io/badge/V1.1-Shipped-brightgreen) ![Stack](https://img.shields.io/badge/Stack-FastAPI%20%2B%20React-blue) ![LLM](https://img.shields.io/badge/LLM-GPT--5.4--mini-orange) ![Voice](https://img.shields.io/badge/Voice-ElevenLabs%20%2B%20OpenAI-purple) ![Auth](https://img.shields.io/badge/Auth-Supabase%20Magic%20Link-green) ![Analytics](https://img.shields.io/badge/Analytics-PostHog-orange)
 
-🚀 **Live Demo:** [https://frontend-hazel-six-60.vercel.app](https://frontend-hazel-six-60.vercel.app)
+🚀 **Live Demo:** [https://mockml-interview-agent.vercel.app](https://mockml-interview-agent.vercel.app)
 
 An industrial-grade, fully AI-powered mock interview system for Machine Learning Engineer candidates. Upload your résumé, go through a structured 5-phase technical interview conducted by an AI interviewer, and receive a detailed performance report with scores and hiring recommendation.
 
@@ -191,6 +191,11 @@ Each factual question scored: 1.0 (correct) / 0.5 (partial) / 0.0 (wrong). Score
 | Embeddings | OpenAI `text-embedding-3-small` |
 | Similarity Search | Cosine similarity (NumPy + scikit-learn) |
 | Database | Supabase (PostgreSQL) |
+| Auth | Supabase Magic Link (email OTP, no password) |
+| Analytics | PostHog (funnel tracking, session replay) |
+| Email | Resend (custom SMTP for magic link emails) |
+| Backend Hosting | Railway (Hobby, $5/mo) |
+| Frontend Hosting | Vercel (Free tier) |
 | ML Question Bank | andrewekhalel/MLQuestions (78 questions) |
 
 ---
@@ -455,6 +460,9 @@ The app works fine without any ElevenLabs setup — OpenAI TTS will be used auto
 | Hint system | Optional hint button for candidates who are completely stuck |
 | Admin view | Interviewer-side transcript and evaluation breakdown |
 | ~~Production deploy~~ | ✅ Railway (backend) + Vercel (frontend) — live |
+| ~~Landing page~~ | ✅ Hero, 5 phases, Russian Doll demo, report preview, final CTA |
+| ~~Auth~~ | ✅ Supabase magic link — email only, no password |
+| ~~Analytics~~ | ✅ PostHog — full funnel tracking from landing to report |
 
 ---
 
