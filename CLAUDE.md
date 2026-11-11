@@ -19,8 +19,8 @@ AI-powered mock interview system for ML Engineer candidates.
 | Service | URL |
 |---|---|
 | Frontend (prod) | https://mockml-interview-agent.vercel.app |
-| Backend (prod) | https://mockmlinterviewagent-production.up.railway.app |
-| Health check | https://mockmlinterviewagent-production.up.railway.app/health |
+| Backend (prod) | https://mockmlinterviewagent-production-c6c8.up.railway.app |
+| Health check | https://mockmlinterviewagent-production-c6c8.up.railway.app/health |
 
 ---
 
@@ -57,7 +57,7 @@ FRONTEND_ORIGIN=https://mockml-interview-agent.vercel.app
 
 ### Frontend (Vercel environment variables — set in dashboard)
 ```
-VITE_API_URL=https://mockmlinterviewagent-production.up.railway.app
+VITE_API_URL=https://mockmlinterviewagent-production-c6c8.up.railway.app
 VITE_SUPABASE_URL=https://jcbgllwakmiosojixfwp.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJ...
 VITE_PUBLIC_POSTHOG_TOKEN=phc_...
